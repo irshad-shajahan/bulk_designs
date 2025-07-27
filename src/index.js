@@ -6,13 +6,13 @@ const { createCanvas, loadImage } = require('canvas');
 class PosterGenerator {
     constructor(templatePath) {
         this.templatePath = templatePath;
-        // Default positions for text elements (can be customized)
+        // Positions matching the retail offer style
         this.positions = {
-            name: { x: 50, y: 100 },
-            sku: { x: 50, y: 150 },
-            actualPrice: { x: 50, y: 200 },
-            offerPrice: { x: 150, y: 200 },
-            productImage: { x: 400, y: 100 }
+            sku: { x: 60, y: 200 },
+            productImage: { x: 400, y: 300 },
+            actualPrice: { x: 100, y: 800 },
+            offerPrice: { x: 100, y: 1000 },
+            name: { x: 100, y: 1200 }
         };
     }
 
@@ -27,52 +27,50 @@ class PosterGenerator {
         // Draw template background
         ctx.drawImage(template, 0, 0);
 
-        // Set up text styles
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = 'black';
-
-        // Draw product name
-        ctx.fillText(productData.name, this.positions.name.x, this.positions.name.y);
-
-        // Draw SKU
+        // Draw SKU at the top
         ctx.font = '24px Arial';
-        ctx.fillText(`SKU: ${productData.sku}`, this.positions.sku.x, this.positions.sku.y);
+        ctx.fillStyle = 'black';
+        ctx.fillText(productData.sku, this.positions.sku.x, this.positions.sku.y);
 
-        // Draw actual price (struck through)
-        ctx.font = '30px Arial';
-        const actualPriceText = `₹${productData.actual_price}`;
-        ctx.strokeStyle = 'black';
-        const metrics = ctx.measureText(actualPriceText);
-        ctx.fillText(actualPriceText, this.positions.actualPrice.x, this.positions.actualPrice.y);
-        ctx.beginPath();
-        ctx.moveTo(this.positions.actualPrice.x, this.positions.actualPrice.y - 5);
-        ctx.lineTo(this.positions.actualPrice.x + metrics.width, this.positions.actualPrice.y - 5);
-        ctx.stroke();
-
-        // Draw offer price in red
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = 'red';
-        ctx.fillText(`₹${productData.offer_price}`, this.positions.offerPrice.x, this.positions.offerPrice.y);
-
-        // Draw product image if available
+        // Draw product image (centered)
         if (productData.image) {
             try {
                 const productImage = await loadImage(productData.image);
-                // Calculate scaling to fit 300x300
-                const scale = Math.min(300 / productImage.width, 300 / productImage.height);
+                const maxWidth = 600;
+                const maxHeight = 400;
+                const scale = Math.min(maxWidth / productImage.width, maxHeight / productImage.height);
                 const width = productImage.width * scale;
                 const height = productImage.height * scale;
-                ctx.drawImage(
-                    productImage,
-                    this.positions.productImage.x,
-                    this.positions.productImage.y,
-                    width,
-                    height
-                );
+                const x = (canvas.width - width) / 2;
+                ctx.drawImage(productImage, x, this.positions.productImage.y, width, height);
             } catch (error) {
                 console.error(`Failed to load product image for ${productData.sku}:`, error);
             }
         }
+
+        // Draw actual price (struck through)
+        ctx.font = '60px Arial';
+        ctx.fillStyle = 'black';
+        const actualPriceText = `SAR ${productData.actual_price}.00`;
+        const metrics = ctx.measureText(actualPriceText);
+        ctx.fillText(actualPriceText, this.positions.actualPrice.x, this.positions.actualPrice.y);
+        ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.moveTo(this.positions.actualPrice.x, this.positions.actualPrice.y - 5);
+        ctx.lineTo(this.positions.actualPrice.x + metrics.width, this.positions.actualPrice.y - 5);
+        ctx.stroke();
+
+        // Draw offer price in large bold black
+        ctx.font = 'bold 180px Arial';
+        ctx.fillStyle = 'black';
+        ctx.fillText(productData.offer_price, this.positions.offerPrice.x, this.positions.offerPrice.y);
+        ctx.font = 'bold 60px Arial';
+        ctx.fillText('SAR ريال', this.positions.offerPrice.x + 400, this.positions.offerPrice.y);
+
+        // Draw product name at the bottom
+        ctx.font = '36px Arial';
+        ctx.fillStyle = 'black';
+        ctx.fillText(productData.name, this.positions.name.x, this.positions.name.y);
 
         return canvas;
     }
@@ -82,7 +80,7 @@ class PosterGenerator {
     }
 }
 
-async function processCSV(csvPath, templatePath, outputDir) {
+async function processCSV(templatePath, csvPath, outputDir) {
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
