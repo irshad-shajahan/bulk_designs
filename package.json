@@ -1,0 +1,13 @@
+{
+  "name": "bulk-designs-generator",
+  "version": "1.0.0",
+  "description": "Script to generate offer posters from a template and CSV data",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "canvas": "^2.11.2",
+    "csv-parser": "^3.0.0"
+  }
+}
