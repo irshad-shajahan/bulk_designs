@@ -1,0 +1,40 @@
+{
+    "template1.png": {
+        "sku": { "x": 124, "y": 525, "font": "48px Arial" },
+        "actualPrice": { "x": 1240, "y": 920, "font": "72px Arial" },
+        "offerPrice": { 
+            "x": 900, 
+            "y": 1100, 
+            "font": "bold 200px Arial",
+            "decimal": {
+                "font": "bold 72px Arial",
+                "yOffset": 0
+            }
+        },
+        "name": { 
+            "x": 124, 
+            "y": 1450, 
+            "font": "80px Arial",
+            "lineHeight": 60
+        }
+    },
+    "template2.png": {
+        "sku": { "x": 200, "y": 600, "font": "48px Arial" },
+        "actualPrice": { "x": 1000, "y": 800, "font": "72px Arial" },
+        "offerPrice": {
+            "x": 800,
+            "y": 1000,
+            "font": "bold 200px Arial",
+            "decimal": {
+                "font": "bold 72px Arial",
+                "yOffset": 0
+            }
+        },
+        "name": {
+            "x": 200,
+            "y": 1300,
+            "font": "48px Arial",
+            "lineHeight": 60
+        }
+    }
+}

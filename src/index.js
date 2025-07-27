@@ -1,136 +1,130 @@
+const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { createCanvas, loadImage } = require('canvas');
 
 class PosterGenerator {
-    constructor(templatePath) {
-        this.templatePath = templatePath;
-        // Positions matching the retail offer style
-        this.positions = {
-            sku: { x: 60, y: 200 },
-            productImage: { x: 400, y: 300 },
-            actualPrice: { x: 100, y: 800 },
-            offerPrice: { x: 100, y: 1000 },
-            name: { x: 100, y: 1200 }
-        };
+    constructor(templatesDir) {
+        // A4 size at 300 DPI: 2480 x 3508 pixels
+        this.width = 2480;
+        this.height = 3508;
+        this.templatesDir = templatesDir;
+        this.templates = new Map(); // Cache for loaded templates
+        
+        // Load template configurations
+        const configPath = path.join(templatesDir, '../template-config.json');
+        if (!fs.existsSync(configPath)) {
+            throw new Error('Template configuration file not found');
+        }
+        this.templateConfigs = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+
+    async loadTemplate(templateName) {
+        if (!this.templates.has(templateName)) {
+            const templatePath = path.join(this.templatesDir, templateName);
+            if (!fs.existsSync(templatePath)) {
+                throw new Error(`Template not found: ${templateName}`);
+            }
+            const template = await loadImage(templatePath);
+            this.templates.set(templateName, template);
+        }
+        return this.templates.get(templateName);
     }
 
     async generatePoster(productData) {
-        // Load the template image
-        const template = await loadImage(this.templatePath);
-        
-        // Create canvas with template dimensions
-        const canvas = createCanvas(template.width, template.height);
+        const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        // Draw template background
-        ctx.drawImage(template, 0, 0);
+        // Load and draw the specified template
+        const template = await this.loadTemplate(productData.template);
+        ctx.drawImage(template, 0, 0, this.width, this.height);
 
-        // Draw SKU at the top
-        ctx.font = '24px Arial';
-        ctx.fillStyle = 'black';
-        ctx.fillText(productData.sku, this.positions.sku.x, this.positions.sku.y);
-
-        // Draw product image (centered)
-        if (productData.image) {
-            try {
-                const productImage = await loadImage(productData.image);
-                const maxWidth = 600;
-                const maxHeight = 400;
-                const scale = Math.min(maxWidth / productImage.width, maxHeight / productImage.height);
-                const width = productImage.width * scale;
-                const height = productImage.height * scale;
-                const x = (canvas.width - width) / 2;
-                ctx.drawImage(productImage, x, this.positions.productImage.y, width, height);
-            } catch (error) {
-                console.error(`Failed to load product image for ${productData.sku}:`, error);
-            }
+        // Get configuration for this template
+        const config = this.templateConfigs[productData.template];
+        if (!config) {
+            throw new Error(`No configuration found for template: ${productData.template}`);
         }
 
-        // Draw actual price (struck through)
-        ctx.font = '60px Arial';
         ctx.fillStyle = 'black';
-        const actualPriceText = `SAR ${productData.actual_price}.00`;
+
+        // Add SKU
+        ctx.font = config.sku.font;
+        ctx.fillText(productData.sku, config.sku.x, config.sku.y);
+
+        // Draw actual price with strikethrough
+        ctx.font = config.actualPrice.font;
+        const actualPriceText = `${productData.actual_price}.00 SAR`;
         const metrics = ctx.measureText(actualPriceText);
-        ctx.fillText(actualPriceText, this.positions.actualPrice.x, this.positions.actualPrice.y);
+        ctx.fillText(actualPriceText, config.actualPrice.x, config.actualPrice.y);
+        
+        // Add strikethrough
         ctx.beginPath();
         ctx.lineWidth = 3;
-        ctx.moveTo(this.positions.actualPrice.x, this.positions.actualPrice.y - 5);
-        ctx.lineTo(this.positions.actualPrice.x + metrics.width, this.positions.actualPrice.y - 5);
+        ctx.moveTo(config.actualPrice.x, config.actualPrice.y - 5);
+        ctx.lineTo(config.actualPrice.x + metrics.width, config.actualPrice.y - 5);
         ctx.stroke();
 
-        // Draw offer price in large bold black
-        ctx.font = 'bold 180px Arial';
-        ctx.fillStyle = 'black';
-        ctx.fillText(productData.offer_price, this.positions.offerPrice.x, this.positions.offerPrice.y);
-        ctx.font = 'bold 60px Arial';
-        ctx.fillText('SAR ريال', this.positions.offerPrice.x + 400, this.positions.offerPrice.y);
+        // Draw offer price
+        ctx.font = config.offerPrice.font;
+        ctx.fillText(productData.offer_price, config.offerPrice.x, config.offerPrice.y);
+        
+        // Draw decimal part
+        ctx.font = config.offerPrice.decimal.font;
+        const decimalY = config.offerPrice.y + (config.offerPrice.decimal.yOffset || 0);
+        ctx.fillText('.95', 
+            config.offerPrice.x + ctx.measureText(productData.offer_price).width,
+            decimalY
+        );
 
-        // Draw product name at the bottom
-        ctx.font = '36px Arial';
-        ctx.fillStyle = 'black';
-        ctx.fillText(productData.name, this.positions.name.x, this.positions.name.y);
+        // Draw product name in both Arabic and English
+        ctx.font = config.name.font;
+        const lines = productData.name.split('\n');
+        let y = config.name.y;
+        for (const line of lines) {
+            ctx.fillText(line, config.name.x, y);
+            y += config.name.lineHeight;
+        }
 
         return canvas;
     }
 
-    setPositions(positions) {
-        this.positions = { ...this.positions, ...positions };
-    }
-}
+    async processCSV(inputFile, outputDir) {
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
 
-async function processCSV(templatePath, csvPath, outputDir) {
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const generator = new PosterGenerator(templatePath);
-
-    fs.createReadStream(csvPath)
-        .pipe(csv())
-        .on('data', async (row) => {
-            try {
-                const canvas = await generator.generatePoster(row);
-                const fileName = `${row.sku || row.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
-                const outputPath = path.join(outputDir, fileName);
-                
-                const out = fs.createWriteStream(outputPath);
-                const stream = canvas.createPNGStream();
-                stream.pipe(out);
-                
-                out.on('finish', () => {
-                    console.log(`Generated poster: ${fileName}`);
-                });
-            } catch (error) {
-                console.error(`Failed to generate poster for ${row.sku || row.name}:`, error);
-            }
-        })
-        .on('end', () => {
-            console.log('Finished processing all rows');
+        const results = [];
+        await new Promise((resolve, reject) => {
+            fs.createReadStream(inputFile)
+                .pipe(csv())
+                .on('data', (data) => results.push(data))
+                .on('end', resolve)
+                .on('error', reject);
         });
+
+        for (const product of results) {
+            try {
+                const canvas = await this.generatePoster(product);
+                const buffer = canvas.toBuffer('image/png');
+                fs.writeFileSync(path.join(outputDir, `${product.sku}.png`), buffer);
+                console.log(`Generated poster for SKU: ${product.sku}`);
+            } catch (error) {
+                console.error(`Error generating poster for SKU ${product.sku}:`, error.message);
+            }
+        }
+    }
 }
 
-// Check if required arguments are provided
-const args = process.argv.slice(2);
-if (args.length < 2) {
-    console.log('Usage: node index.js <template.png> <data.csv> [output_dir]');
-    process.exit(1);
+// Main execution
+if (require.main === module) {
+    const [,, templatesDir, inputFile, outputDir] = process.argv;
+    if (!templatesDir || !inputFile || !outputDir) {
+        console.error('Usage: node index.js <templates-directory> <input-csv> <output-directory>');
+        process.exit(1);
+    }
+
+    const generator = new PosterGenerator(templatesDir);
+    generator.processCSV(inputFile, outputDir)
+        .then(() => console.log('Processing complete!'))
+        .catch(error => console.error('Error:', error));
 }
-
-const templatePath = args[0];
-const csvPath = args[1];
-const outputDir = args[2] || 'output';
-
-// Validate files exist
-if (!fs.existsSync(templatePath)) {
-    console.error(`Template file not found: ${templatePath}`);
-    process.exit(1);
-}
-
-if (!fs.existsSync(csvPath)) {
-    console.error(`CSV file not found: ${csvPath}`);
-    process.exit(1);
-}
-
-processCSV(templatePath, csvPath, outputDir).catch(console.error);
