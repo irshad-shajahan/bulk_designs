@@ -1,7 +1,12 @@
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+
+// Register DM Sans fonts
+const fontsDir = path.join(__dirname, '../fonts');
+registerFont(path.join(fontsDir, 'DMSans-Regular.ttf'), { family: 'DM Sans' });
+registerFont(path.join(fontsDir, 'DMSans-Bold.ttf'), { family: 'DM Sans', weight: 'bold' });
 
 class PosterGenerator {
     constructor(templatesDir) {

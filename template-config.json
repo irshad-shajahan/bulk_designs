@@ -1,39 +1,39 @@
 {
     "template1.png": {
-        "sku": { "x": 124, "y": 525, "font": "48px Arial" },
-        "actualPrice": { "x": 1240, "y": 920, "font": "72px Arial" },
+        "sku": { "x": 200, "y": 750, "font": "48px 'DM Sans'" },
+        "actualPrice": { "x": 1600, "y": 2500, "font": "72px 'DM Sans'" },
         "offerPrice": { 
-            "x": 900, 
-            "y": 1100, 
-            "font": "bold 200px Arial",
+            "x": 720, 
+            "y": 3000, 
+            "font": "bold 500px 'DM Sans'",
             "decimal": {
-                "font": "bold 72px Arial",
+                "font": "bold 72px 'DM Sans'",
                 "yOffset": 0
             }
         },
         "name": { 
             "x": 320, 
             "y": 3150, 
-            "font": "80px Arial",
+            "font": "80px 'DM Sans'",
             "lineHeight": 60
         }
     },
     "template2.png": {
-        "sku": { "x": 200, "y": 600, "font": "48px Arial" },
-        "actualPrice": { "x": 1000, "y": 800, "font": "72px Arial" },
+        "sku": { "x": 200, "y": 600, "font": "48px 'DM Sans'" },
+        "actualPrice": { "x": 1000, "y": 800, "font": "72px 'DM Sans'" },
         "offerPrice": {
             "x": 800,
             "y": 1000,
-            "font": "bold 200px Arial",
+            "font": "bold 200px 'DM Sans'",
             "decimal": {
-                "font": "bold 72px Arial",
+                "font": "bold 72px 'DM Sans'",
                 "yOffset": 0
             }
         },
         "name": {
             "x": 200,
             "y": 1300,
-            "font": "48px Arial",
+            "font": "48px 'DM Sans'",
             "lineHeight": 60
         }
     }
